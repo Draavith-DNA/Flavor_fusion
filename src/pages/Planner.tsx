@@ -7,6 +7,7 @@ import { Loader2, Sparkles, Check, ChevronRight, ChevronLeft, RotateCcw } from "
 import { diseases, diseaseIcons, dietaryPreferences, dietIcons, dietDescriptions, generateMealPlan, type UserProfile } from "@/data/mockData";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { generateMealPlanAI } from "@/lib/ai";
 import healthAdvisor from "@/assets/health-advisor.png";
 import healthCouple from "@/assets/health-couple.png";
 
@@ -94,7 +95,7 @@ export default function Planner() {
     toast({ title: "Form reset", description: "Starting fresh." });
   };
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     setLoading(true);
     const profile: UserProfile = {
       name: name || "Alex",
@@ -105,13 +106,35 @@ export default function Planner() {
       preference,
     };
 
-    setTimeout(() => {
-      const plan = generateMealPlan(profile);
-      setLoading(false);
+    try {
+      const plan = await generateMealPlanAI(profile);
       sessionStorage.setItem("mealPlan", JSON.stringify(plan));
       sessionStorage.setItem("userProfile", JSON.stringify(profile));
+      toast({
+        title: "Plan Generated!",
+        description: "AI has customized your nutrition plan.",
+      });
       navigate("/dashboard");
-    }, 1800);
+    } catch (error: any) {
+      console.error("AI Generation failed:", error);
+      
+      // Fallback to mock data if AI fails
+      const plan = generateMealPlan(profile);
+      sessionStorage.setItem("mealPlan", JSON.stringify(plan));
+      sessionStorage.setItem("userProfile", JSON.stringify(profile));
+      
+      toast({
+        title: "AI Generation Error",
+        description: "Using standard recommendations (API key might be missing).",
+        variant: "destructive",
+      });
+      
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 1500);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const totalSteps = 3;

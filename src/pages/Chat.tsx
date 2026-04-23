@@ -3,20 +3,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Send, Bot, User, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { chatbotResponses } from "@/data/mockData";
+import { type UserProfile } from "@/data/mockData";
+import { generateChatResponse } from "@/lib/ai";
 
 interface Message {
   id: number;
   role: "user" | "assistant";
   content: string;
-}
-
-function getResponse(input: string): string {
-  const lower = input.toLowerCase();
-  for (const [key, val] of Object.entries(chatbotResponses)) {
-    if (lower.includes(key)) return val;
-  }
-  return chatbotResponses["default"];
 }
 
 export default function Chat() {
@@ -25,24 +18,41 @@ export default function Chat() {
   ]);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const storedProfile = sessionStorage.getItem("userProfile");
+    if (storedProfile) setProfile(JSON.parse(storedProfile));
+  }, []);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, typing]);
 
-  const sendMessage = () => {
-    if (!input.trim()) return;
-    const userMsg: Message = { id: Date.now(), role: "user", content: input.trim() };
+  const sendMessage = async () => {
+    if (!input.trim() || typing) return;
+    const userContent = input.trim();
+    const userMsg: Message = { id: Date.now(), role: "user", content: userContent };
+    
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setTyping(true);
 
-    setTimeout(() => {
-      const response = getResponse(userMsg.content);
-      setMessages((prev) => [...prev, { id: Date.now() + 1, role: "assistant", content: response }]);
-      setTyping(false);
-    }, 1200);
+    const chatHistory = messages
+      .filter(m => m.id !== 0) // exclude welcome message from AI history if needed, but usually fine to include
+      .map(m => ({ role: m.role, content: m.content }));
+    
+    chatHistory.push({ role: "user", content: userContent });
+
+    const response = await generateChatResponse(chatHistory, profile);
+    
+    setMessages((prev) => [...prev, { 
+      id: Date.now() + 1, 
+      role: "assistant", 
+      content: response 
+    }]);
+    setTyping(false);
   };
 
   return (

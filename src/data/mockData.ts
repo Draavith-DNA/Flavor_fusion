@@ -61,6 +61,7 @@ export interface MealItem {
   benefits: string;
   image: string;
   mealTime: string;
+  prepTime?: string;
   warning?: string;
 }
 

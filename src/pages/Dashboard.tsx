@@ -10,6 +10,9 @@ import { StreakCard } from "@/components/StreakCard";
 import { ReportGenerator } from "@/components/ReportGenerator";
 import { StepCounter } from "@/components/StepCounter";
 
+/**
+ * A donut chart component that visualizes calorie consumption against a goal.
+ */
 function CalorieDonut({ current, goal }: { current: number; goal: number }) {
   const remaining = Math.max(goal - current, 0);
   const data = [
@@ -49,6 +52,9 @@ function CalorieDonut({ current, goal }: { current: number; goal: number }) {
   );
 }
 
+/**
+ * A small circular badge to display specific macronutrient values (protein, fat, carbs).
+ */
 function MacroBadge({ label, value, unit, color }: { label: string; value: number; unit: string; color: string }) {
   return (
     <div className="text-center">
@@ -60,6 +66,9 @@ function MacroBadge({ label, value, unit, color }: { label: string; value: numbe
   );
 }
 
+/**
+ * A card component representing a single meal item with image, name, and benefits.
+ */
 function MealCard({ item, onSwap }: { item: MealItem; onSwap?: () => void }) {
   const navigate = useNavigate();
   const slug = item.name.toLowerCase().replace(/\s+/g, "-");
@@ -92,9 +101,17 @@ function MealCard({ item, onSwap }: { item: MealItem; onSwap?: () => void }) {
             </button>
           )}
         </div>
-        <div className="flex items-center gap-1 mt-1.5">
-          <span className="text-primary text-[10px] font-bold">Why this works:</span>
-          <span className="text-[10px] text-muted-foreground truncate">{item.benefits}</span>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
+          <div className="flex items-center gap-1">
+            <span className="text-primary text-[10px] font-bold whitespace-nowrap">Why this works:</span>
+            <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">{item.benefits}</span>
+          </div>
+          {item.prepTime && (
+            <div className="flex items-center gap-1">
+              <span className="text-amber-600 text-[10px] font-bold whitespace-nowrap">Time:</span>
+              <span className="text-[10px] text-muted-foreground">{item.prepTime}</span>
+            </div>
+          )}
         </div>
       </div>
     </motion.div>
