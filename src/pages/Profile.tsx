@@ -28,17 +28,18 @@ export default function Profile() {
       setEmail(user.email || "");
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('*, biometrics(*)')
         .eq('id', user.id)
         .single();
       
       if (data && !error) {
+        const bio = data.biometrics?.[0];
         setProfile({
           name: data.full_name,
-          age: data.age,
-          weight: data.weight,
-          height: data.height,
-          diseases: data.health_conditions || [],
+          age: bio?.age,
+          weight: bio?.weight,
+          height: bio?.height,
+          diseases: bio?.health_conditions || [],
           preference: data.dietary_preference
         });
       }
