@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Layout } from "@/components/Layout";
 import { PageTransition } from "@/components/PageTransition";
+import { AuthGuard } from "@/components/AuthGuard";
 import { AnimatePresence } from "framer-motion";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
@@ -49,9 +50,11 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Layout>
-          <AnimatedRoutes />
-        </Layout>
+        <AuthGuard>
+          <Layout>
+            <AnimatedRoutes />
+          </Layout>
+        </AuthGuard>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

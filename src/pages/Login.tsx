@@ -6,21 +6,72 @@ import { Label } from "@/components/ui/label";
 import { UtensilsCrossed, Mail, Lock, User, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
 
 export default function Login() {
   const [isSignup, setIsSignup] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: isSignup ? "Account Created! 🎉" : "Welcome Back! 👋",
-      description: isSignup
-        ? "Your SmartPlate AI account is ready."
-        : "You've been successfully logged in.",
-    });
-    setTimeout(() => navigate("/planner"), 1000);
+    setIsLoading(true);
+
+    try {
+      if (isSignup) {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: name,
+            },
+          },
+        });
+        if (error) throw error;
+        toast({
+          title: "Account Created! 🎉",
+          description: "Your SmartPlate AI account is ready. You might need to confirm your email.",
+        });
+        setTimeout(() => navigate("/planner"), 1000);
+      } else {
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (signInError) throw signInError;
+
+        // Check onboarding status
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("onboarding_completed")
+          .eq("id", signInData.user.id)
+          .single();
+
+        toast({
+          title: "Welcome Back! 👋",
+          description: "You've been successfully logged in.",
+        });
+
+        if (profile?.onboarding_completed) {
+          navigate("/dashboard");
+        } else {
+          navigate("/planner");
+        }
+      }
+    } catch (error: any) {
+      toast({
+        title: "Authentication Error",
+        description: error.message || "An error occurred.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -50,7 +101,7 @@ export default function Login() {
               <Label htmlFor="name" className="text-sm font-semibold text-muted-foreground">Full Name</Label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input id="name" placeholder="Alex Johnson" className="pl-10 bg-secondary/50 border-border rounded-xl h-11" />
+                <Input id="name" placeholder="Alex Johnson" value={name} onChange={(e) => setName(e.target.value)} className="pl-10 bg-secondary/50 border-border rounded-xl h-11" required />
               </div>
             </div>
           )}
@@ -59,7 +110,7 @@ export default function Login() {
             <Label htmlFor="email" className="text-sm font-semibold text-muted-foreground">Email</Label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input id="email" type="email" placeholder="you@example.com" className="pl-10 bg-secondary/50 border-border rounded-xl h-11" />
+              <Input id="email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className="pl-10 bg-secondary/50 border-border rounded-xl h-11" required />
             </div>
           </div>
 
@@ -67,13 +118,13 @@ export default function Login() {
             <Label htmlFor="password" className="text-sm font-semibold text-muted-foreground">Password</Label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input id="password" type="password" placeholder="••••••••" className="pl-10 bg-secondary/50 border-border rounded-xl h-11" />
+              <Input id="password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="pl-10 bg-secondary/50 border-border rounded-xl h-11" required minLength={6} />
             </div>
           </div>
 
-          <Button type="submit" className="w-full coral-btn h-12 text-base shadow-lg mt-2">
-            {isSignup ? "Create Account" : "Sign In"}
-            <ArrowRight className="ml-2 h-4 w-4" />
+          <Button type="submit" disabled={isLoading} className="w-full coral-btn h-12 text-base shadow-lg mt-2">
+            {isLoading ? "Please wait..." : isSignup ? "Create Account" : "Sign In"}
+            {!isLoading && <ArrowRight className="ml-2 h-4 w-4" />}
           </Button>
         </form>
 

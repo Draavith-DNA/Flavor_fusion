@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
-import { Flame, TrendingUp, Droplets, Dumbbell, AlertTriangle, ArrowRight, RefreshCw } from "lucide-react";
+import { Flame, TrendingUp, Droplets, Dumbbell, AlertTriangle, ArrowRight, RefreshCw, CheckCircle2, Circle } from "lucide-react";
 import { type MealPlan, type MealItem, type UserProfile } from "@/data/mockData";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { StreakCard } from "@/components/StreakCard";
 import { ReportGenerator } from "@/components/ReportGenerator";
-import { StepCounter } from "@/components/StepCounter";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
+import { Loader2 } from "lucide-react";
 
 /**
  * A donut chart component that visualizes calorie consumption against a goal.
@@ -69,49 +71,68 @@ function MacroBadge({ label, value, unit, color }: { label: string; value: numbe
 /**
  * A card component representing a single meal item with image, name, and benefits.
  */
-function MealCard({ item, onSwap }: { item: MealItem; onSwap?: () => void }) {
+function MealCard({ item, onSwap, isCompleted, onToggle }: { item: MealItem; onSwap?: () => void; isCompleted: boolean; onToggle: () => void }) {
   const navigate = useNavigate();
   const slug = item.name.toLowerCase().replace(/\s+/g, "-");
 
   return (
     <motion.div
-      className="soft-card-hover p-4 flex gap-4 items-center cursor-pointer"
+      className={`soft-card-hover p-4 flex gap-4 items-center cursor-pointer relative overflow-hidden transition-all duration-300 ${
+        isCompleted ? "opacity-70 bg-secondary/30" : ""
+      }`}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       onClick={() => navigate(`/meal/${slug}`)}
     >
-      <img
-        src={item.image}
-        alt={item.name}
-        loading="lazy"
-        width={64}
-        height={64}
-        className="h-16 w-16 rounded-2xl object-cover flex-shrink-0"
-      />
+      <div className="relative">
+        <img
+          src={item.image}
+          alt={item.name}
+          loading="lazy"
+          width={64}
+          height={64}
+          className={`h-16 w-16 rounded-2xl object-cover flex-shrink-0 transition-all duration-500 ${
+            isCompleted ? "grayscale" : ""
+          }`}
+        />
+        {isCompleted && (
+          <div className="absolute inset-0 flex items-center justify-center bg-primary/20 rounded-2xl">
+            <CheckCircle2 className="h-8 w-8 text-primary fill-white" />
+          </div>
+        )}
+      </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <h4 className="font-bold text-sm text-foreground">{item.name}</h4>
+            <h4 className={`font-bold text-sm transition-all ${isCompleted ? "text-muted-foreground line-through" : "text-foreground"}`}>
+              {item.name}
+            </h4>
             <p className="text-xs text-muted-foreground">{item.mealTime}</p>
           </div>
-          {onSwap && (
-            <button onClick={onSwap} className="text-primary text-xs font-bold flex items-center gap-1 hover:underline whitespace-nowrap">
-              <RefreshCw className="h-3 w-3" />
-              Swap
+          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+            {onSwap && !isCompleted && (
+              <button onClick={onSwap} className="text-primary text-[10px] font-bold flex items-center gap-1 hover:underline whitespace-nowrap">
+                <RefreshCw className="h-2.5 w-2.5" />
+                Swap
+              </button>
+            )}
+            <button 
+              onClick={onToggle}
+              className={`h-8 w-8 rounded-full flex items-center justify-center transition-all ${
+                isCompleted 
+                  ? "bg-primary text-white scale-110 shadow-md" 
+                  : "bg-secondary text-muted-foreground hover:bg-primary/10 hover:text-primary"
+              }`}
+            >
+              {isCompleted ? <CheckCircle2 className="h-5 w-5" /> : <Circle className="h-5 w-5" />}
             </button>
-          )}
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
           <div className="flex items-center gap-1">
             <span className="text-primary text-[10px] font-bold whitespace-nowrap">Why this works:</span>
             <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">{item.benefits}</span>
           </div>
-          {item.prepTime && (
-            <div className="flex items-center gap-1">
-              <span className="text-amber-600 text-[10px] font-bold whitespace-nowrap">Time:</span>
-              <span className="text-[10px] text-muted-foreground">{item.prepTime}</span>
-            </div>
-          )}
         </div>
       </div>
     </motion.div>
@@ -121,14 +142,107 @@ function MealCard({ item, onSwap }: { item: MealItem; onSwap?: () => void }) {
 export default function Dashboard() {
   const [plan, setPlan] = useState<MealPlan | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [completedMeals, setCompletedMeals] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem("completedMeals");
+      if (stored) {
+        const data = JSON.parse(stored);
+        if (data.date === new Date().toISOString().split("T")[0]) {
+          return data.meals;
+        }
+      }
+    } catch {}
+    return [];
+  });
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const { completeDailyGoal } = useStreak();
 
   useEffect(() => {
-    const stored = sessionStorage.getItem("mealPlan");
-    const storedProfile = sessionStorage.getItem("userProfile");
-    if (stored) setPlan(JSON.parse(stored));
-    if (storedProfile) setProfile(JSON.parse(storedProfile));
+    async function loadAllData() {
+      setIsLoading(true);
+      
+      // 1. Check Session Storage first
+      const storedPlan = sessionStorage.getItem("mealPlan");
+      const storedProfile = sessionStorage.getItem("userProfile");
+      
+      if (storedPlan && storedProfile) {
+        setPlan(JSON.parse(storedPlan));
+        setProfile(JSON.parse(storedProfile));
+        setIsLoading(false);
+        return;
+      }
+
+      // 2. Fallback to Supabase if session is empty
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+        
+        if (data && !error) {
+          if (data.last_meal_plan) {
+            setPlan(data.last_meal_plan);
+            sessionStorage.setItem("mealPlan", JSON.stringify(data.last_meal_plan));
+          }
+          
+          const prof = {
+            name: data.full_name,
+            age: data.age,
+            weight: data.weight,
+            height: data.height,
+            diseases: data.health_conditions || [],
+            preference: data.dietary_preference
+          };
+          setProfile(prof);
+          sessionStorage.setItem("userProfile", JSON.stringify(prof));
+        }
+      }
+      setIsLoading(false);
+    }
+
+    loadAllData();
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem("completedMeals", JSON.stringify({
+      date: new Date().toISOString().split("T")[0],
+      meals: completedMeals
+    }));
+  }, [completedMeals]);
+
+  const toggleMeal = (mealName: string) => {
+    setCompletedMeals(prev => {
+      const isFinishing = !prev.includes(mealName);
+      const next = isFinishing 
+        ? [...prev, mealName] 
+        : prev.filter(m => m !== mealName);
+      
+      const totalMeals = plan ? (plan.breakfast.length + plan.lunch.length + plan.snacks.length + plan.dinner.length) : 4;
+      
+      if (next.length === totalMeals && isFinishing) {
+        toast({
+          title: "Daily Goal Completed! 🏆",
+          description: "All meals checked! Your daily streak has increased.",
+        });
+        completeDailyGoal();
+      }
+      
+      return next;
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center px-6">
+        <Loader2 className="h-10 w-10 text-primary animate-spin mb-4" />
+        <p className="text-muted-foreground font-medium animate-pulse">Loading your personalized dashboard...</p>
+      </div>
+    );
+  }
 
   if (!plan) {
     return (
@@ -226,10 +340,19 @@ export default function Dashboard() {
           {/* Right column - Meals */}
           <div className="lg:col-span-3 space-y-6">
             <div className="soft-card p-6">
-              <h3 className="font-display font-extrabold mb-4">Today's Meals</h3>
+              <h3 className="font-display font-extrabold mb-1">Today's Meals</h3>
+              <p className="text-[10px] text-muted-foreground mb-4 font-medium">
+                Complete all meals to maintain your streak ({completedMeals.length}/{allMeals.length})
+              </p>
               <div className="space-y-3">
                 {allMeals.map((meal) => (
-                  <MealCard key={meal.name} item={meal} onSwap={() => {}} />
+                  <MealCard 
+                    key={meal.name} 
+                    item={meal} 
+                    isCompleted={completedMeals.includes(meal.name)}
+                    onToggle={() => toggleMeal(meal.name)}
+                    onSwap={() => {}} 
+                  />
                 ))}
               </div>
             </div>
@@ -274,9 +397,9 @@ export default function Dashboard() {
           </h3>
           <div className="grid sm:grid-cols-2 gap-x-8 gap-y-4">
             {[
-              { label: "Calorie Goal", value: 78 },
+              { label: "Calorie Goal", value: plan.totalCalories > 0 ? Math.min(100, Math.round((completedMeals.length / allMeals.length) * 100)) : 0 },
               { label: "Hydration", value: 65 },
-              { label: "Protein Intake", value: 82 },
+              { label: "Goal Progress", value: Math.min(100, Math.round((completedMeals.length / allMeals.length) * 100)) },
               { label: "Fiber Intake", value: 55 },
             ].map((item) => (
               <div key={item.label} className="space-y-2">

@@ -28,7 +28,6 @@ const mainItems = [
 const accountItems = [
   { title: "Profile", url: "/profile", icon: User },
   { title: "Admin", url: "/admin", icon: ShieldCheck },
-  { title: "Login", url: "/login", icon: LogIn },
 ];
 
 export function AppSidebar() {

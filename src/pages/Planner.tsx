@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { generateMealPlanAI } from "@/lib/ai";
 import healthAdvisor from "@/assets/health-advisor.png";
 import healthCouple from "@/assets/health-couple.png";
+import { supabase } from "@/lib/supabase";
 
 const DRAFT_KEY = "plannerDraft";
 
@@ -62,6 +63,8 @@ export default function Planner() {
 
   const [draft, setDraft] = useState<PlannerDraft>(() => loadDraft());
   const [loading, setLoading] = useState(false);
+  const [customDisease, setCustomDisease] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { step, name, age, weight, height, selectedDiseases, preference } = draft;
   const update = (patch: Partial<PlannerDraft>) =>
@@ -89,6 +92,19 @@ export default function Planner() {
     });
   };
 
+  const addCustomDisease = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (customDisease && !selectedDiseases.includes(customDisease)) {
+      toggleDisease(customDisease);
+      setCustomDisease("");
+      toast({ title: "Custom condition added", description: customDisease });
+    }
+  };
+
+  const filteredDiseases = diseases.filter(d => 
+    d.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   const handleReset = () => {
     sessionStorage.removeItem(DRAFT_KEY);
     setDraft(defaultDraft);
@@ -107,12 +123,33 @@ export default function Planner() {
     };
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        // Save to Supabase profiles table
+        const { error: dbError } = await supabase
+          .from('profiles')
+          .update({
+            full_name: profile.name,
+            age: profile.age,
+            weight: profile.weight,
+            height: profile.height,
+            health_conditions: profile.diseases,
+            dietary_preference: profile.preference,
+            onboarding_completed: true,
+            last_meal_plan: plan
+          })
+          .eq('id', user.id);
+          
+        if (dbError) throw dbError;
+      }
+
       const plan = await generateMealPlanAI(profile);
       sessionStorage.setItem("mealPlan", JSON.stringify(plan));
       sessionStorage.setItem("userProfile", JSON.stringify(profile));
       toast({
         title: "Plan Generated!",
-        description: "AI has customized your nutrition plan.",
+        description: "Your health profile has been saved and AI has customized your plan.",
       });
       navigate("/dashboard");
     } catch (error: any) {
@@ -241,8 +278,48 @@ export default function Planner() {
             </div>
 
             <div className="soft-card p-5 space-y-5">
-              <div className="flex flex-wrap gap-2.5">
-                {diseases.map((d) => (
+              <div className="space-y-3">
+                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Search or Add Condition</Label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Input 
+                      placeholder="Search or type a condition..." 
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="bg-secondary/50 border-border rounded-xl h-11 pr-10"
+                    />
+                    {searchQuery && (
+                      <button 
+                        onClick={() => {
+                          if (!selectedDiseases.includes(searchQuery)) {
+                            toggleDisease(searchQuery);
+                            setSearchQuery("");
+                          }
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-primary/10 text-primary p-1.5 rounded-lg hover:bg-primary/20"
+                      >
+                        <Check className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2.5 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                {/* Selected items first */}
+                {selectedDiseases.filter(d => !diseases.includes(d)).map((d) => (
+                  <button
+                    key={d}
+                    onClick={() => toggleDisease(d)}
+                    className="px-4 py-2.5 rounded-2xl text-sm font-bold transition-all duration-200 border-2 flex items-center gap-1.5 bg-primary/10 border-primary text-primary scale-[1.02]"
+                  >
+                    <span className="text-base">💊</span>
+                    <Check className="h-3.5 w-3.5" />
+                    {d}
+                  </button>
+                ))}
+                
+                {filteredDiseases.map((d) => (
                   <button
                     key={d}
                     onClick={() => toggleDisease(d)}
@@ -257,6 +334,19 @@ export default function Planner() {
                     {d}
                   </button>
                 ))}
+                
+                {filteredDiseases.length === 0 && searchQuery && (
+                  <button
+                    onClick={() => {
+                      toggleDisease(searchQuery);
+                      setSearchQuery("");
+                    }}
+                    className="w-full py-4 rounded-2xl border-2 border-dashed border-primary/30 text-primary font-bold flex items-center justify-center gap-2 hover:bg-primary/5 transition-colors"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    Add custom condition: "{searchQuery}"
+                  </button>
+                )}
               </div>
 
               <div className="flex gap-3">
