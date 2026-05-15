@@ -1,102 +1,85 @@
-# 🥗 Flavor Fusion
-
-<p align="center">
-  <img src="./logo.png" width="200" alt="Flavor Fusion Logo">
-</p>
+# 🥗 SmartPlate AI (Flavor Fusion)
 
 <p align="center">
   <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React">
   <img src="https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript">
-  <img src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite">
-  <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind">
+  <img src="https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase">
   <img src="https://img.shields.io/badge/Groq-FF5722?style=for-the-badge&logo=google-cloud&logoColor=white" alt="Groq AI">
 </p>
 
 ---
 
 ## 🌟 Overview
-**Flavor Fusion** is a premium, AI-driven nutrition and wellness ecosystem designed to bridge the gap between medical needs and culinary delight. It leverages **Groq's Llama 3** to generate scientifically-backed, clinical-grade meal plans tailored to specific health conditions, dietary preferences (including Jain, Vegan, Keto), and personal goals.
-
-![Dashboard Mockup](./mockup.png)
+**SmartPlate AI** is a premium, full-stack nutrition and wellness ecosystem designed to bridge the gap between medical needs and culinary delight. Using **Groq's Llama 3.3** and a robust **Supabase Relational Database**, it generates clinically-backed meal plans tailored to specific health conditions, dietary preferences, and real-time metabolic tracking.
 
 ## ✨ Key Features
 
 -   🤖 **AI Meal Generation**: Personalized 1-day meal plans focused on Medical Nutrition Therapy (MNT).
--   🏥 **Clinical Intelligence**: Supports conditions like Diabetes, Hypertension, and PCOS with proactive clinical risk alerts.
--   💬 **Personalized AI Nutritionist**: A 24/7 chat assistant for nutritional advice, recipe modifications, and health queries.
--   🏋️ **Tailored Exercises**: Curated workout library filtered by health impact and personal conditions.
--   📊 **Macro Precision**: Real-time tracking of calories, protein, fats, and carbs vs. personal goals.
--   🥗 **Dietary Diversity**: Native support for Jain, Keto, Vegan, Mediterranean, and Sattvic diets.
--   🌗 **Modern UI**: Sleek, glassmorphic dark-mode interface built for performance and accessibility.
--   📋 **Health Reports**: PDF generation for meal plans and progress tracking.
+-   🔐 **Full Auth Persistence**: Secure login/signup via Supabase with automatic onboarding recovery.
+-   🗄️ **Relational Persistence**: Cloud-synced tracking for biometrics, meal plans, and individual meal completions.
+-   📊 **Clinical Dashboard**: Real-time BMI calculation, metabolic parameter tracking, and macro precision.
+-   🥗 **Dietary Flexibility**: Switch between Jain, Keto, Vegan, Mediterranean, and more on-the-fly with AI re-syncing.
+-   📈 **Streak Tracking**: Built-in gamification that tracks daily completion goals and historical streaks.
+-   💬 **AI Nutritionist**: A 24/7 chat assistant for expert clinical dietary advice.
 
 ## 🚀 Tech Stack
 
 -   **Frontend**: React 18, Vite, TypeScript
--   **AI Engine**: Groq API (Llama 3.3-70b)
--   **Styling**: Tailwind CSS, Framer Motion (Animations)
--   **UI Components**: Radix UI, Shadcn UI, Lucide Icons
--   **Data Visualization**: Recharts
--   **State Management**: TanStack Query (React Query)
--   **Schema Validation**: Zod
--   **Forms**: React Hook Form
+-   **Backend/DB**: Supabase (PostgreSQL, Auth, RLS)
+-   **AI Engine**: Groq API (Llama-3.3-70b-versatile)
+-   **Animations**: Framer Motion
+-   **UI Components**: Shadcn UI, Lucide Icons, Recharts
 
 ## 🛠️ Installation & Setup
 
 1.  **Clone the repository**:
     ```bash
-    git clone https://github.com/Amith1417/flavor-fusion-plans.git
+    git clone https://github.com/Draavith-DNA/Flavor_fusion.git
     cd flavor-fusion-plans
     ```
 
 2.  **Install dependencies**:
     ```bash
-    bun install
-    # or
     npm install
     ```
 
 3.  **Environment Variables**:
-    Create a `.env` file in the root directory and add your Groq API key:
+    Create a `.env` file in the root directory:
     ```env
-    VITE_GROQ_API_KEY=your_groq_api_key_here
+    VITE_SUPABASE_URL=your_supabase_url
+    VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+    VITE_GROQ_API_KEY=your_groq_api_key
     ```
 
-4.  **Run the development server**:
+4.  **Database Setup**:
+    Run the following script in your **Supabase SQL Editor** to initialize the relational schema:
+    ```sql
+    -- Full Schema Initialization available in docs/db_schema.sql
+    ```
+
+5.  **Run Locally**:
     ```bash
-    bun dev
-    # or
     npm run dev
     ```
 
-## 📂 Project Structure
+## 📂 Database Schema (Relational)
 
-```text
-src/
-├── components/     # Reusable UI molecules & atoms
-├── data/           # Mock data and exercise libraries
-├── hooks/          # Custom React hooks
-├── lib/            # External API integrations (AI, etc.)
-├── pages/          # Full page components & routing
-└── types/          # TypeScript definitions
-```
+The application uses a normalized PostgreSQL structure for maximum efficiency:
+-   **`profiles`**: Master user identity and onboarding status.
+-   **`biometrics`**: Specialized table for physical health metrics.
+-   **`meal_plans`**: Historical log of all AI-generated plan sessions.
+-   **`meals`**: Granular tracking of every meal's macros and completion status.
 
 ## 🤝 Contributing
 
-Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
-
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+Contributions are welcome! Please fork the project and open a pull request for any major changes.
 
 ## 📄 License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+Distributed under the MIT License.
 
 ---
 
 <p align="center">
-  Built with ❤️ by the Flavor Fusion Team.
+  Built with ❤️ for Clinical Excellence.
 </p>
