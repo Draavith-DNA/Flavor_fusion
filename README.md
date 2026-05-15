@@ -12,6 +12,8 @@
 ## 🌟 Overview
 **SmartPlate AI** is a premium, full-stack nutrition and wellness ecosystem designed to bridge the gap between medical needs and culinary delight. Using **Groq's Llama 3.3** and a robust **Supabase Relational Database**, it generates clinically-backed meal plans tailored to specific health conditions, dietary preferences, and real-time metabolic tracking.
 
+**Live Demo:** [https://flavor-fusion-nine.vercel.app/](https://flavor-fusion-nine.vercel.app/)
+
 ## ✨ Key Features
 
 -   🤖 **AI Meal Generation**: Personalized 1-day meal plans focused on Medical Nutrition Therapy (MNT).
